@@ -30,6 +30,37 @@
     [hidden] { display: none !important; }
     @media (orientation: portrait) and (pointer: coarse) { #rotate { display: grid; } }
   </style>
+  <script>
+(function () {
+  if (window.__altairAudioContextStates) return;
+  var contexts = [];
+  var NativeAudioContext = window.AudioContext || window.webkitAudioContext;
+  window.__altairAudioContextStates = function () {
+    return contexts.map(function (context) { return { state: context.state, sampleRate: context.sampleRate }; });
+  };
+  if (!NativeAudioContext) return;
+  var WrappedAudioContext = new Proxy(NativeAudioContext, {
+    construct: function (target, args) {
+      var context = Reflect.construct(target, args);
+      contexts = contexts.filter(function (existing) { return existing.state !== 'closed'; });
+      contexts.push(context);
+      return context;
+    }
+  });
+  window.AudioContext = WrappedAudioContext;
+  if (window.webkitAudioContext === NativeAudioContext) window.webkitAudioContext = WrappedAudioContext;
+  function unlockOnGesture(event) {
+    if (!event.isTrusted) return;
+    contexts.forEach(function (context) {
+      if (context.state !== 'running' && context.state !== 'closed') context.resume().catch(function () {});
+    });
+  }
+  ['pointerdown', 'touchend', 'keydown'].forEach(function (name) {
+    document.addEventListener(name, unlockOnGesture, { capture: true, passive: true });
+  });
+}());
+</script>
+
   <link id="-gd-engine-icon" rel="icon" type="image/png" href="index.icon.png" />
 <link rel="apple-touch-icon" href="index.apple-touch-icon.png"/>
 
@@ -52,7 +83,7 @@
   <script>window.addEventListener("aiden-asset-error",function(event){if(typeof fail==="function")fail(event.detail);});</script>
   <script src="index.js"></script>
   <script>
-    const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":46972264,"index.wasm":38057390},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
+    const GODOT_CONFIG = {"args":[],"canvasResizePolicy":0,"emscriptenPoolSize":8,"ensureCrossOriginIsolationHeaders":false,"executable":"index","experimentalVK":true,"fileSizes":{"index.pck":50614116,"index.wasm":38057390},"focusCanvas":true,"gdextensionLibs":[],"godotPoolSize":4};
     const GODOT_THREADS_ENABLED = false;
     const diagnostics = window.__aidenDiagnostics = { state: 'ready', threads: GODOT_THREADS_ENABLED, logs: [], errors: [], safeArea: {}, startupAt: null };
     const canvas = document.getElementById('canvas');
